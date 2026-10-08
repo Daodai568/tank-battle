@@ -280,7 +280,7 @@ function buildRandomLevel() {
 /* ================= 游戏状态 ================= */
 let state = 'menu';          // menu | playing | paused | levelclear | basedown | gameover | win
 let level = 1, score = 0, lives = 3;
-let grid = [];
+let grid = Array.from({ length: ROWS }, () => Array(COLS).fill(EMPTY));
 let player = null;
 let enemies = [], bullets = [], particles = [], powerups = [];
 let toSpawn = 0, spawnTimer = 0, spawnIndex = 0;
@@ -792,7 +792,7 @@ function drawOverlay() {
     if (blink) {
       ctx.fillStyle = '#e8ecf5';
       ctx.font = '20px "Segoe UI", "Microsoft YaHei", sans-serif';
-      ctx.fillText('按 Enter 开始游戏', SIZE / 2, 320);
+      ctx.fillText('按 Enter 或点击屏幕开始', SIZE / 2, 320);
     }
     ctx.textAlign = 'left';
   } else if (state === 'paused') {
@@ -893,24 +893,32 @@ function handleEnter() {
   }
 }
 
-const KEYMAP = {
-  arrowup: 'up', w: 'up',
-  arrowdown: 'down', s: 'down',
-  arrowleft: 'left', a: 'left',
-  arrowright: 'right', d: 'right',
-  ' ': 'fire',
+const CODEMAP = {
+  ArrowUp: 'up', KeyW: 'up',
+  ArrowDown: 'down', KeyS: 'down',
+  ArrowLeft: 'left', KeyA: 'left',
+  ArrowRight: 'right', KeyD: 'right',
+  Space: 'fire',
 };
 
+function isEnter(e) {
+  return e.code === 'Enter' || e.code === 'NumpadEnter' || e.key === 'Enter' || e.keyCode === 13;
+}
+function isPauseKey(e) {
+  const k = (e.key || '').toLowerCase();
+  return e.code === 'KeyP' || e.code === 'Escape' || k === 'p' || k === 'escape';
+}
+
 window.addEventListener('keydown', (e) => {
-  const k = e.key.toLowerCase();
-  if (k === 'p' || k === 'escape') { togglePause(); e.preventDefault(); return; }
-  if (k === 'enter') { handleEnter(); e.preventDefault(); return; }
-  if (k in KEYMAP) { setKey(KEYMAP[k], true); e.preventDefault(); }
+  if (isPauseKey(e)) { togglePause(); e.preventDefault(); return; }
+  if (isEnter(e)) { handleEnter(); e.preventDefault(); return; }
+  const c = CODEMAP[e.code];
+  if (c) { setKey(c, true); e.preventDefault(); }
   if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
 });
 window.addEventListener('keyup', (e) => {
-  const k = e.key.toLowerCase();
-  if (k in KEYMAP) { setKey(KEYMAP[k], false); e.preventDefault(); }
+  const c = CODEMAP[e.code];
+  if (c) { setKey(c, false); e.preventDefault(); }
 });
 
 // 触屏控制
@@ -926,6 +934,11 @@ if (touch) {
 }
 document.addEventListener('pointerdown', () => {
   if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+});
+// 点击/触摸游戏画面也可开始或重新开始
+canvas.addEventListener('pointerdown', () => {
+  if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+  handleEnter();
 });
 
 /* ================= 启动 ================= */
